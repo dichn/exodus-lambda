@@ -146,10 +146,17 @@ class OriginRequest(LambdaBase):
                 request["uri"] = (
                     "/" + query_result["Items"][0]["object_key"]["S"]
                 )
-                content_type = query_result["Items"][0]["content_type"]["S"]
+                content_type = (
+                    query_result["Items"][0].get("content_type", {}).get("S")
+                )
                 if content_type:
                     request["querystring"] = urllib.parse.urlencode(
                         {"response-content-type": content_type}
+                    )
+                else:
+                    # return "application/octet-stream" when content_type is empty
+                    request["querystring"] = urllib.parse.urlencode(
+                        {"response-content-type": "application/octet-stream"}
                     )
 
                 self.logger.info(
