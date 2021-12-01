@@ -38,15 +38,24 @@ class DBHandler:
     ):
         if not from_date:
             from_date = self.default_from_date
-        return self.dynamodb.put_item(
-            TableName=self.table,
-            Item={
+        if not content_type:
+            item = {
+                "web_uri": {"S": web_uri},
+                "from_date": {"S": from_date},
+                "object_key": {"S": object_key},
+                "metadata": {"M": metadata},
+            }
+        else:
+            item = {
                 "web_uri": {"S": web_uri},
                 "from_date": {"S": from_date},
                 "object_key": {"S": object_key},
                 "content_type": {"S": content_type},
                 "metadata": {"M": metadata},
-            },
+            }
+        self.dynamodb.put_item(
+            TableName=self.table,
+            Item=item,
         )
 
 
