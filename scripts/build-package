@@ -1,10 +1,11 @@
 #!/bin/bash
-set -e
-
+set -x
 pip install --require-hashes -r requirements.txt --target ./package
 pip install --no-deps --target ./package .
 cp ./configuration/exodus-lambda-deploy.yaml ./package
 scripts/mk-config > ./package/lambda_config.json
+ls -al .
+echo $EXODUS_LAMBDA_VERSION
 aws cloudformation package \
 	--template ./package/exodus-lambda-deploy.yaml \
 	--s3-bucket $PROJECT-pipeline-artifacts \
