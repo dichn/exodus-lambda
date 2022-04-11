@@ -9,14 +9,16 @@ from ..test_utils.utils import generate_test_cookies
 TEST_COOKIES = generate_test_cookies()
 
 
-def test_exodus_basic(cdn_test_url):
+def test_exodus_basic(cdn_test_url, src_version):
     url = (
         cdn_test_url
         + "/content/aus/rhel/server/6/6.5/x86_64/os/Packages/c/cpio-2.10-12.el6_5.x86_64.rpm"
     )
-
-    r = requests.get(url, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    r = ses.get(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
+    assert src_version in r.headers["x-exodus-version"]
     assert r.status_code == 200
     assert "cache-control" not in r.headers
 
@@ -42,38 +44,47 @@ testdata_cache_control_path = [
 
 
 @pytest.mark.parametrize("testdata_path", testdata_cache_control_path)
-def test_header_cache_control(cdn_test_url, testdata_path):
+def test_header_cache_control(cdn_test_url, testdata_path, src_version):
     url = cdn_test_url + testdata_path
-    r = requests.get(url, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    r = ses.get(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
+    assert src_version in r.headers["x-exodus-version"]
     assert r.status_code == 200
     assert re.match("^max-age=[0-9]+$", r.headers["cache-control"])
 
 
-def test_header_want_digest_GET(cdn_test_url):
-    headers = {"want-digest": "id-sha-256"}
+def test_header_want_digest_GET(cdn_test_url, src_version):
     url = (
         cdn_test_url
         + "/content/dist/rhel/server/7/7.2/x86_64/rhev-mgmt-agent/3/os/repodata/repomd.xml"
     )
-    r = requests.get(url, headers=headers, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    ses.headers["want-digest"] = "id-sha-256"
+    r = ses.get(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert (
         r.headers["digest"]
         == "id-sha-256=hYGantfjJjDl4O5HesjPpwtIG2V5vWIuIOfuki9ThDk="
     )
 
 
-def test_header_want_digest_HEAD(cdn_test_url):
-    headers = {"want-digest": "id-sha-256"}
+def test_header_want_digest_HEAD(cdn_test_url, src_version):
     url = (
         cdn_test_url
         + "/content/dist/rhel/server/7/7.2/x86_64/rhev-mgmt-agent/3/os/repodata/repomd.xml"
     )
-    r = requests.head(url, headers=headers, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    ses.headers["want-digest"] = "id-sha-256"
+    r = ses.head(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert (
         r.headers["digest"]
         == "id-sha-256=hYGantfjJjDl4O5HesjPpwtIG2V5vWIuIOfuki9ThDk="
@@ -101,20 +112,26 @@ def assert_content_type(url, content_type):
 
 
 @pytest.mark.parametrize("testdata_path", testdata_content_type_path)
-def test_content_type_header_GET(cdn_test_url, testdata_path):
+def test_content_type_header_GET(cdn_test_url, testdata_path, src_version):
     url = cdn_test_url + testdata_path
-    r = requests.get(url, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    r = ses.get(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert_content_type(url, r.headers["Content-Type"])
 
 
 @pytest.mark.parametrize("testdata_path", testdata_content_type_path)
-def test_content_type_header_HEAD(cdn_test_url, testdata_path):
+def test_content_type_header_HEAD(cdn_test_url, testdata_path, src_version):
     url = cdn_test_url + testdata_path
-    r = requests.head(url, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    r = ses.head(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert_content_type(url, r.headers["Content-Type"])
 
 
@@ -128,12 +145,15 @@ testdata_origin_alias_path = [
 
 # use Want-Digest/Digest to check if alias take effect
 @pytest.mark.parametrize("testdata_path", testdata_origin_alias_path)
-def test_origin_path_alias(cdn_test_url, testdata_path):
-    headers = {"want-digest": "id-sha-256"}
+def test_origin_path_alias(cdn_test_url, testdata_path, src_version):
     url = cdn_test_url + testdata_path
-    r = requests.head(url, headers=headers, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    ses.headers["want-digest"] = "id-sha-256"
+    r = ses.head(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert (
         r.headers["digest"]
         == "id-sha-256=QWT/LAEW1mZXi6XkVqsDuIeI37QvuT/JGywdpwnYZoY="
@@ -147,12 +167,15 @@ testdata_rhui_alias_path_aus = [
 
 
 @pytest.mark.parametrize("testdata_path", testdata_rhui_alias_path_aus)
-def test_rhui_path_alias_aus(cdn_test_url, testdata_path):
-    headers = {"want-digest": "id-sha-256"}
+def test_rhui_path_alias_aus(cdn_test_url, testdata_path, src_version):
     url = cdn_test_url + testdata_path
-    r = requests.head(url, headers=headers, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    ses.headers["want-digest"] = "id-sha-256"
+    r = ses.head(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert (
         r.headers["digest"]
         == "id-sha-256=BjFlOLkNOqsg9HhxMjB/bTMNqaSLqxGhPgphb89iLOU="
@@ -166,12 +189,15 @@ testdata_rhui_alias_path_rhel8 = [
 
 
 @pytest.mark.parametrize("testdata_path", testdata_rhui_alias_path_rhel8)
-def test_rhui_path_alias_rhel8(cdn_test_url, testdata_path):
-    headers = {"want-digest": "id-sha-256"}
+def test_rhui_path_alias_rhel8(cdn_test_url, testdata_path, src_version):
     url = cdn_test_url + testdata_path
-    r = requests.head(url, headers=headers, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    ses.headers["want-digest"] = "id-sha-256"
+    r = ses.head(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert (
         r.headers["digest"]
         == "id-sha-256=WA2MMEwPzpikfPAoOEnl6ffo9ce9p2aSEkl2UEaUfkA="
@@ -185,12 +211,15 @@ testdata_releasever_alias_rhel6 = [
 
 
 @pytest.mark.parametrize("testdata_path", testdata_releasever_alias_rhel6)
-def test_releasever_alias_rhel6(cdn_test_url, testdata_path):
-    headers = {"want-digest": "id-sha-256"}
+def test_releasever_alias_rhel6(cdn_test_url, testdata_path, src_version):
     url = cdn_test_url + testdata_path
-    r = requests.head(url, headers=headers, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    ses.headers["want-digest"] = "id-sha-256"
+    r = ses.head(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert (
         r.headers["digest"]
         == "id-sha-256=BjFlOLkNOqsg9HhxMjB/bTMNqaSLqxGhPgphb89iLOU="
@@ -203,11 +232,14 @@ testdata_no_content_type = [
 
 
 @pytest.mark.parametrize("testdata_path", testdata_no_content_type)
-def test_no_content_type(cdn_test_url, testdata_path):
+def test_no_content_type(cdn_test_url, testdata_path, src_version):
     url = cdn_test_url + testdata_path
-    r = requests.get(url, cookies=TEST_COOKIES)
+    ses = requests.session()
+    ses.headers["x-exodus-query"] = "true"
+    r = ses.get(url, cookies=TEST_COOKIES)
     print(json.dumps(dict(r.headers), indent=2))
     assert r.status_code == 200
+    assert src_version in r.headers["x-exodus-version"]
     assert r.headers["Content-Type"] == "application/octet-stream"
 
 

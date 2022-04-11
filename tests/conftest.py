@@ -30,6 +30,11 @@ def pytest_addoption(parser):
         action="store",
         help="enable integration tests against this lambda stack",
     )
+    parser.addoption(
+        "--src-version",
+        action="store",
+        help="enable lambda source version validation",
+    )
 
 
 @pytest.fixture
@@ -45,6 +50,17 @@ def cdn_test_url(request):
     else:
         pytest.skip("Test skipped without --cdn-test-url or --lambda-stack")
     return url
+
+
+@pytest.fixture
+def src_version(request):
+    if request.config.getoption("--src-version"):
+        version = request.config.getoption("--src-version")
+    elif os.environ.get("CODEBUILD_RESOLVED_SOURCE_VERSION"):
+        version = os.environ.get("CODEBUILD_RESOLVED_SOURCE_VERSION")
+    else:
+        pytest.skip("Test skipped because failed to get lambda version")
+    return version
 
 
 def mock_conf_file():
